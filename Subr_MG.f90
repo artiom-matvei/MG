@@ -67,7 +67,7 @@ subroutine Allocate_grids ( nx_fine, length ) !Set_up in Thor's
 		
 end subroutine Allocate_grids
 
-subroutine Initialize_forcings (pi_8,param1,param2,inF,inA)
+subroutine Initialize_forcings (pi_8,nx,param1,param2,inF,inA)
 	use Levels
 	
 	integer :: i, n, nx, j, k, l, param1, param2
@@ -80,72 +80,8 @@ subroutine Initialize_forcings (pi_8,param1,param2,inF,inA)
 	n = number_of_levels-1; nx=level(n)%nx	
 	dx=level(n)%dx
 
-if (param1==0 .AND. param2==0) then
-	var_x=1.
-	var_y=var_x
-	mean=pi_8/2
-!...instead of having if statements inside, put them between the first loop and the second
-!...like in the forcing interpolation
-	do k=0,1
-	do j=1,nx+1
-	do i=1,nx+1
-		if (k==0) then
-			x=dx*(real(i-1))
-			y=dx*(real(j-1)+0.5)
-		else 
-			x=dx*(real(i-1)+0.5)
-			y=dx*(real(j-1))
-		endif
-	level(n)%a(i,j,k)=1!-exp(-0.5*( ((x-mean)/var_x)**2+ ((y-mean)/var_y)**2 ) ) / (var_x*var_y*2*pi_8) 
-	level(n)%F(i,j,k)=sin(x)+sin(y)
-
-	enddo
-        !print *, level(n)%a(:,j,k)
-	enddo
-	enddo
-else if (param1==0 .AND. param2/=0 ) then
-        level(n)%a=inA
-	!add F computation from 1st case
-        do k=0,1
-	do j=1,nx+1
-	do i=1,nx+1
-		if (k==0) then
-			x=dx*(real(i-1))
-			y=dx*(real(j-1)+0.5)
-		else 
-			x=dx*(real(i-1)+0.5)
-			y=dx*(real(j-1))
-		endif
-	level(n)%F(i,j,k)=sin(x)+sin(y)
-
-	enddo
-        !print *, level(n)%a(:,j,k)
-	enddo
-	enddo        
-else if (param1/=0 .AND. param2==0 ) then
-        level(n)%F=inF
-	!add A computation from 1st case
-        do k=0,1
-	do j=1,nx+1
-	do i=1,nx+1
-		if (k==0) then
-			x=dx*(real(i-1))
-			y=dx*(real(j-1)+0.5)
-		else 
-			x=dx*(real(i-1)+0.5)
-			y=dx*(real(j-1))
-		endif
-	level(n)%a(i,j,k)=1-exp(-0.5*( ((x-mean)/var_x)**2+ ((y-mean)/var_y)**2 ) ) / (var_x*var_y*2*pi_8) 
-
-	enddo
-        !print *, level(n)%a(:,j,k)
-	enddo
-	enddo        
-else
         level(n)%F=inF
         level(n)%a=inA
-endif
-        !...if condition for given forcings ends here
 
 	!...TODO
 	!...add divF computation!
@@ -253,9 +189,9 @@ do l=0,num_its
 	v_0(nx+1,1:nx)=v_0(nx,1:nx)
 	v_0(1:nx,0)=v_0(1:nx,1)
 	v_0(1:nx,nx+1)=v_0(1:nx,nx)
-
 	do j=1,nx
 	do i=1,nx
+
 	v_0(i,j)=(v_0(i+1,j)*a(i+1,j,0)+v_0(i-1,j)*a(i,j,0)+v_0(i,j+1)*a(i,j+1,1)+v_0(i,j-1)*a(i,j,1)&
 			&-dx**2*divF(i,j))/(a(i+1,j,0)+a(i,j,0)+a(i,j+1,1)+a(i,j,1))
         mean=mean+v_0(i,j)/nx**2
@@ -377,7 +313,7 @@ length=pi_8
 !allocate (v_0(-1:nx,-1:nx), v_1(-1:nx,-1:nx), divF(0:nx-1,0:nx-1), a(0:nx,0:nx,0:1), F(0:nx,0:nx,0:1))
 
 call Allocate_grids(nx, length)
-call Initialize_forcings(pi_8,param1,param2,inF, inA)
+call Initialize_forcings(pi_8,nx,param1,param2,inF, inA)
 
 do k=number_of_levels-1,1,-1
 call Smoothing (num_its, k)
@@ -394,5 +330,6 @@ enddo
 k=number_of_levels-1
 call Smoothing (num_its,k)
 
-outSol=level(k)%v
+nx=level(number_of_levels -1)%nx
+outSol=level(k)%v(1:nx,1:nx)
 end subroutine MG

@@ -22,7 +22,7 @@ integer :: i, n, nx, j, k, l, param1, param2
 real :: dx, mean, var_x, var_y, length
 real(8),  parameter :: PI_8  = 4 * atan (1.0_8)
 
-nx=1024
+nx=8
 length=pi_8
 dx=length/nx
 
@@ -45,13 +45,15 @@ do i=1,nx+1
 		x=dx*(real(i-1)+0.5)
 		y=dx*(real(j-1))
 	endif
-inA(i,j,k)=1-exp(-0.5*( ((x-mean)/var_x)**2+ ((y-mean)/var_y)**2 ) ) / (var_x*var_y*2*pi_8) 
+inA(i,j,k)=1!-exp(-0.5*( ((x-mean)/var_x)**2+ ((y-mean)/var_y)**2 ) ) / (var_x*var_y*2*pi_8) 
 inF(i,j,k)=sin(x)+sin(y)
 enddo
 enddo
 enddo
 
+!!!!first argument is the number of iterations per level in the V-cycle
 call MG(100,nx,1,1,inF,inA,outSol)
-
-print *, outSol
+do i=level(number_of_levels -1)%nx,1,-1
+print *, outSol(i,:)
+enddo
 end program
