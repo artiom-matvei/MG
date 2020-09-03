@@ -15,133 +15,49 @@
 program main
 include Subr_MG.f90
 use levels
-F=>level(k)%F
-a=>level(k)%a
-divF=>level(k)%divF
-v_0=>level(k)%v
-dx=level(k)%dx
-nx=level(k)%nx
-allocate(v_1(1:nx,1:nx))
-do j=1,nx
-do i=1,nx
-	v_1(i,j)=divF(i,j)-(v_0(i+1,j)*a(i+1,j,0)+v_0(i-1,j)*a(i,j,0)+v_0(i,j+1)*a(i,j+1,1)+v_0(i,j-1)*a(i,j,1)&
-			&-v_0(i,j)*(a(i+1,j,0)+a(i,j,0)+a(i,j+1,1)+a(i,j,1)))/dx**2
-enddo
-enddo
-do i=nx,1,-1
-print *, v_0(1:nx,i)
-enddo
+integer :: nx
+real, allocatable, dimension (:,:,:) :: inF, inA
+real, allocatable, dimension (:,:) ::   inDivF, outSol
+integer :: i, n, nx, j, k, l, param1, param2
+real :: dx, mean, var_x, var_y
+real(8),  parameter :: PI_8  = 4 * atan (1.0_8)
 
-!print *, "The above table is the solution, the below is the residual." 
+        !...if condition for given forcings begins here
+	!...initialize finest grid forcings
+	n = number_of_levels-1; nx=level(n)%nx	
+	dx=level(n)%dx
 
-do j=nx,1,-1
-!print *, v_1(:,j)
-enddo
-!print *, "Below is the divF"
-do j=nx,1,-1
-        print *, v_1(:,j)
-enddo
-do j=level(k-1)%nx+1,1,-1
-        !print *, level(k-1)%a(:,j,0)
+
+nx=1024
+
+allocate(inF(0:nx,0:nx,0:1),inA(0:nx,0:nx,0:1))
+allocate(outSol(1:nx,1:nx))
+outSol=0
+inF=0
+inA=1
+	var_x=1.
+	var_y=var_x
+	mean=pi_8/2
+!...instead of having if statements inside, put them between the first loop and the second
+!...like in the forcing interpolation
+	do k=0,1
+	do j=1,nx+1
+	do i=1,nx+1
+		if (k==0) then
+			x=dx*(real(i-1))
+			y=dx*(real(j-1)+0.5)
+		else 
+			x=dx*(real(i-1)+0.5)
+			y=dx*(real(j-1))
+		endif
+	level(n)%a(i,j,k)=1!-exp(-0.5*( ((x-mean)/var_x)**2+ ((y-mean)/var_y)**2 ) ) / (var_x*var_y*2*pi_8) 
+	level(n)%F(i,j,k)=sin(x)+sin(y)
+
+	enddo
+        !print *, level(n)%a(:,j,k)
+	enddo
 	enddo
 
-open(20, file = 'error_gnu', status = 'unknown')
-write(20,*) 'set cbrange[-1:1] #use to change coloarbar' 
-write(20,*) 'set zrange[-1:1] #use to whiteout extreme values'
-write(20,*) '# indicates comment'
-write(20,*) '# the first two lines are optional'
-write(20,*) 'set pm3d map'
-write(20,*) 'splot "-"'
-
-do j = 1,nx
-	y =  float(j)*dx-dx/2 !zero to one
-	do i = 1,nx
-		x =  float(i)*dx-dx/2
-		write(20,*) x, y, v_1(i,j)
-	enddo 
-	write(20,*) ! write blank line between rows 
-enddo  
-close(20)
-
-open(20, file = 'h_gnu', status = 'unknown')!a(i,j,0)
-write(20,*) 'set cbrange[-1:1] #use to change coloarbar' 
-write(20,*) 'set zrange[-1:1] #use to whiteout extreme values'
-write(20,*) '# indicates comment'
-write(20,*) '# the first two lines are optional'
-write(20,*) 'set pm3d map'
-write(20,*) 'splot "-"'
-
-do j = 1,nx
-	y =  float(j)*dx  !zero to one
-	do i = 1,nx+1
-		x =  float(i)*dx
-		write(20,*) x, y, a(i,j,0)
-	enddo 
-	write(20,*) ! write blank line between rows 
-enddo  
-close(20)
-
-open(20, file = 'rhs_gnu', status = 'unknown')
-write(20,*) 'set cbrange[-1:1] #use to change coloarbar' 
-write(20,*) 'set zrange[-1:1] #use to whiteout extreme values'
-write(20,*) '# indicates comment'
-write(20,*) '# the first two lines are optional'
-write(20,*) 'set pm3d map'
-write(20,*) 'splot "-"'
-
-do j = 1,nx
-	y =  float(j)*dx-dx/2 !zero to one
-	do i = 1,nx
-		x =  float(i)*dx-dx/2
-		write(20,*) x, y, divF(i,j)
-	enddo 
-	write(20,*) ! write blank line between rows 
-enddo  
-close(20)
-
-
-
-open(20, file = 'phi_gnu', status = 'unknown')
-write(20,*) 'set cbrange[-1:1] #use to change coloarbar' 
-write(20,*) 'set zrange[-1:1] #use to whiteout extreme values'
-write(20,*) '# indicates comment'
-write(20,*) '# the first two lines are optional'
-write(20,*) 'set pm3d map'
-write(20,*) 'splot "-"'
-
-do j = 1,nx
-	y =  float(j)*dx-dx/2 !zero to one
-	do i = 1,nx
-		x =  float(i)*dx-dx/2
-		write(20,*) x, y, v_0(i,j)
-	enddo 
-	write(20,*) ! write blank line between rows 
-enddo  
-close(20)
-
-
-open(20, file = 'fx_gnu', status = 'unknown')!F(i,j,0)
-write(20,*) 'set cbrange[-1:1] #use to change coloarbar' 
-write(20,*) 'set zrange[-1:1] #use to whiteout extreme values'
-write(20,*) '# indicates comment'
-write(20,*) '# the first two lines are optional'
-write(20,*) 'set pm3d map'
-write(20,*) 'splot "-"'
-
-do j = 1,nx
-	y =  float(j)*dx  !zero to one
-	do i = 1,nx+1
-		x =  float(i)*dx
-		write(20,*) x, y, F(i,j,0)
-	enddo 
-	write(20,*) ! write blank line between rows 
-enddo  
-close(20)
+call MG(100,nx,0,0,inF,inA,outSol)
 
 end program
-!tests to do
-!0. verify against an analytic function
-!1. loop at the coarsest level until convergence (stationary point)
-!2. test against other solvers like:
-!3. First grid configuration 
-!4. new grid configuration
