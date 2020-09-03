@@ -73,14 +73,14 @@ subroutine Initialize_forcings (pi_8,param1,param2,inF,inA)
 	integer :: i, n, nx, j, k, l, param1, param2
 	real :: dx, mean, var_x, var_y
         real(8), intent(in) :: pi_8
-        real, dimension (0:nx,0:nx,0:1) :: inF, inA
+        real, dimension (1:nx+1,1:nx+1,0:1) :: inF, inA
 
         !...if condition for given forcings begins here
 	!...initialize finest grid forcings
 	n = number_of_levels-1; nx=level(n)%nx	
 	dx=level(n)%dx
 
-if (param1==0 && param2==0) then
+if (param1==0 .AND. param2==0) then
 	var_x=1.
 	var_y=var_x
 	mean=pi_8/2
@@ -364,7 +364,8 @@ subroutine MG(num_its,nx,param1,param2,inF, inA, outSol)
 use levels
 integer nx, num_its, l, i, j, k, param1, param2
 
-real, dimension (0:nx,0:nx,0:1) :: inF, inA
+real, dimension (1:nx+1,1:nx+1,0:1) :: inF, inA
+real, dimension (1:nx,1:nx) :: outSol
 
 real, dimension (:,:), pointer :: divF, v_0, v_1
 real, dimension (:,:,:), pointer :: a, F 
@@ -392,4 +393,6 @@ enddo
 
 k=number_of_levels-1
 call Smoothing (num_its,k)
+
+outSol=level(k)%v
 end subroutine MG

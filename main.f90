@@ -12,52 +12,46 @@
 !                                                       !
 !                                                       !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+include "Subr_MG.f90"
+
 program main
-include Subr_MG.f90
 use levels
-integer :: nx
 real, allocatable, dimension (:,:,:) :: inF, inA
 real, allocatable, dimension (:,:) ::   inDivF, outSol
 integer :: i, n, nx, j, k, l, param1, param2
-real :: dx, mean, var_x, var_y
+real :: dx, mean, var_x, var_y, length
 real(8),  parameter :: PI_8  = 4 * atan (1.0_8)
 
-        !...if condition for given forcings begins here
-	!...initialize finest grid forcings
-	n = number_of_levels-1; nx=level(n)%nx	
-	dx=level(n)%dx
-
-
 nx=1024
+length=pi_8
+dx=length/nx
 
-allocate(inF(0:nx,0:nx,0:1),inA(0:nx,0:nx,0:1))
-allocate(outSol(1:nx,1:nx))
+allocate(inF(1:nx+1,1:nx+1,0:1),inA(1:nx+1,1:nx+1,0:1),outSol(1:nx,1:nx))
 outSol=0
 inF=0
 inA=1
-	var_x=1.
-	var_y=var_x
-	mean=pi_8/2
+var_x=1.
+var_y=var_x
+mean=pi_8/2
 !...instead of having if statements inside, put them between the first loop and the second
 !...like in the forcing interpolation
-	do k=0,1
-	do j=1,nx+1
-	do i=1,nx+1
-		if (k==0) then
-			x=dx*(real(i-1))
-			y=dx*(real(j-1)+0.5)
-		else 
-			x=dx*(real(i-1)+0.5)
-			y=dx*(real(j-1))
-		endif
-	level(n)%a(i,j,k)=1!-exp(-0.5*( ((x-mean)/var_x)**2+ ((y-mean)/var_y)**2 ) ) / (var_x*var_y*2*pi_8) 
-	level(n)%F(i,j,k)=sin(x)+sin(y)
+do k=0,1
+do j=1,nx+1
+do i=1,nx+1
+	if (k==0) then
+		x=dx*(real(i-1))
+		y=dx*(real(j-1)+0.5)
+	else 
+		x=dx*(real(i-1)+0.5)
+		y=dx*(real(j-1))
+	endif
+inA(i,j,k)=1-exp(-0.5*( ((x-mean)/var_x)**2+ ((y-mean)/var_y)**2 ) ) / (var_x*var_y*2*pi_8) 
+inF(i,j,k)=sin(x)+sin(y)
+enddo
+enddo
+enddo
 
-	enddo
-        !print *, level(n)%a(:,j,k)
-	enddo
-	enddo
+call MG(100,nx,1,1,inF,inA,outSol)
 
-call MG(100,nx,0,0,inF,inA,outSol)
-
+print *, outSol
 end program
